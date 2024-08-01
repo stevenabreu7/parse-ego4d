@@ -1,0 +1,7 @@
+*.out
+venv
+# logs/*.out
+*.zip
+*.csv
+*.json
+wandb
