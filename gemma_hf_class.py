@@ -26,13 +26,16 @@ from utils import load_data, TextDataset
 model_id  = "google/gemma-2b-it"
 max_seqlen = 1024
 lora_rank = 4
-lora_rank = 32
-batch_size = 8
+# lora_rank = 32
+# batch_size = 8
 batch_size = 64
+# batch_size = 32
 n_epochs = 3
 n_epochs = 20
-use_narrations = True
+# use_narrations = True
 use_narrations = False
+min_correct = 4.0
+min_sensible = 4.0
 
 
 with open("hf_token.txt", "r") as f:
@@ -41,7 +44,7 @@ login(hf_token)
 
 
 # Load the dataset
-df = load_data()
+df = load_data(min_correct=min_correct, min_sensible=min_sensible)
 train_dataset = TextDataset(df, tokenizer=None, include_narration=use_narrations, split="train")
 val_dataset = TextDataset(df, tokenizer=None, include_narration=use_narrations, split="val")
 test_dataset = TextDataset(df, tokenizer=None, include_narration=use_narrations, split="test")
@@ -125,6 +128,8 @@ wandb.init(
         "lora_rank": lora_rank,
         "max_seqlen": max_seqlen,
         "batch_size": batch_size,
+        "min_correct": min_correct,
+        "min_sensible": min_sensible,
     }
 )
 
