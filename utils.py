@@ -88,7 +88,7 @@ class TextDataset(Dataset):
         return sample
 
 
-def load_data(folder=""):
+def load_data(folder="", min_sensible=0.0, min_correct=0.0, min_implicit=0.0):
     with open(folder + "narration_compressed.json", "r") as f:
         narrations = json.load(f)
     list(narrations.keys())[:3]
@@ -107,5 +107,11 @@ def load_data(folder=""):
     df["Summary"] = df["PARSE-Ego4D ID"].apply(lambda x: narrations["-".join(x.split("-")[:-3]).lower()]["narration_pass_1"][0])
     ua = list(df.Action.unique())
     df["Label"] = df.Action.apply(lambda x: ua.index(x)).astype(int)
+
+    # Filter out sensible actions
+    df = df[df["SENSIBLE_mean"] >= min_sensible]
+    df = df[df["CORRECT_mean"] >= min_correct]
+    df = df[df["IMPLICIT_mean"] >= min_implicit]
+    print(f"after filtering, {df.shape[0]} samples are left.")
 
     return df

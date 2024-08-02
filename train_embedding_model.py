@@ -32,6 +32,8 @@ def train_model(
     model_name: str, layer_sizes: list[int],
     num_epochs: int, batch_size: int,
     embedding_max_length: int = None,
+    min_correct: float = 0.0,
+    min_sensible: float = 0.0,
 ):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     train_dataset = TextDataset(df, tokenizer, include_narration=True, split="train")
@@ -41,8 +43,10 @@ def train_model(
     test_dataloader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    if 'gte-base' in model_name:
-         embedding_max_length = 8192//4
+    if ('gte-base' in model_name) and use_narrations:
+        embedding_max_length = 8192//4
+    elif ('gte-large' in model_name) and use_narrations:
+        embedding_max_length = 1024
 
     emb_model = AutoModel.from_pretrained(model_name, trust_remote_code=True).to(device)
     model = create_custom_model(
@@ -59,6 +63,8 @@ def train_model(
             "layer_sizes": layer_sizes,
             "use_narrations": use_narrations,
             "max_length": embedding_max_length,
+            "min_correct": min_correct,
+            "min_sensible": min_sensible,
         }
     )
 
@@ -198,6 +204,8 @@ def parse_arguments():
     parser.add_argument("--layer_sizes", type=str, help="List of layer sizes")
     parser.add_argument("--n_epochs", type=int, default=100, help="Number of epochs (default: 100)")
     parser.add_argument("--batch_size", type=int, default=64, help="Batch size (default: 64)")
+    parser.add_argument("--min_sensible", type=float, default=0.0, help="minimum value for SENSIBLEness of samples")
+    parser.add_argument("--min_correct", type=float, default=0.0, help="minimum value for CORRECTness of samples")
     args = parser.parse_args()
     return args
 
@@ -209,7 +217,10 @@ if __name__ == "__main__":
     layer_sizes = [] if args.layer_sizes == "" else [int(size) for size in args.layer_sizes.split(",")]
     N_EPOCHS = args.n_epochs
     BATCH_SIZE = args.batch_size
+    min_sensible = args.min_sensible
+    min_correct = args.min_correct
     print(f"Running with layer_sizes={layer_sizes}, use_narrations={use_narrations}, model_name={model_name}, n_epochs={N_EPOCHS}, batch_size={BATCH_SIZE}")
+    print(f"Dataset with min_sensible={min_sensible}, min_correct={min_correct}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -218,16 +229,12 @@ if __name__ == "__main__":
         "Alibaba-NLP/gte-base-en-v1.5": 768,
         "Alibaba-NLP/gte-large-en-v1.5": 1024,
         "google/mobilebert-uncased": 512,
-        # "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-        # "distilbert-base-uncased",
     }
     embedding_max_tokens = {
         "avsolatorio/GIST-small-Embedding-v0": 512,
         "Alibaba-NLP/gte-base-en-v1.5": 8192,
         "Alibaba-NLP/gte-large-en-v1.5": 8192,
         "google/mobilebert-uncased": 512,
-        # "Alibaba-NLP/gte-Qwen2-1.5B-instruct",
-        # "distilbert-base-uncased",
     }
     model_names = list(embedding_sizes.keys())
 
@@ -242,7 +249,7 @@ if __name__ == "__main__":
     # folder = "./drive/MyDrive/stevenabreu@/Ego4D stevenabreu@/Ego4D data/External/colab/"
     # folder = "/content/drive/MyDrive/stevenabreu@/Ego4D stevenabreu@/Ego4D data/External/colab/"
     folder = ""
-    df = load_data(folder)
+    df = load_data(folder, min_sensible=min_sensible, min_correct=min_correct)
 
     print(f"Training {model_name} with layer sizes {layer_sizes} and use_narrations={use_narrations}")
     train_model(
@@ -253,6 +260,8 @@ if __name__ == "__main__":
         num_epochs=N_EPOCHS,
         batch_size=BATCH_SIZE,
         embedding_max_length=embedding_max_tokens[model_name],
+        min_correct=min_correct,
+        min_sensible=min_sensible,
     )
     # try:
     # except Exception as e:

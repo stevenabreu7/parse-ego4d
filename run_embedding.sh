@@ -16,6 +16,8 @@ use_narrations="False"
 model_name=None
 n_epochs=100
 batch_size=64
+min_sensible=0.0
+min_correct=0.0
 
 # Parse arguments
 for i in "$@"
@@ -41,6 +43,14 @@ case $i in
     n_epochs="${i#*=}"
     shift # past argument with no value
     ;;
+    --min_sensible=*)
+    min_sensible="${i#*=}"
+    shift # past argument with no value
+    ;;
+    --min_correct=*)
+    min_correct="${i#*=}"
+    shift # past argument with no value
+    ;;
     *)
     # unknown option
     ;;
@@ -49,7 +59,7 @@ done
 
 # Prepare optional parameter strings
 args=""
-for var in layer_sizes use_narrations model_name batch_size n_epochs; do
+for var in layer_sizes use_narrations model_name batch_size n_epochs min_sensible min_correct; do
     value=$(eval echo \$$var)
     if [ "$value" != "None" ]; then
         args+=" --$var=$value"
@@ -58,13 +68,10 @@ done
 
 echo "Running with args: $args"
 
-# setup pyenv
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init -)"
 eval "$(pyenv virtualenv-init -)"
-
-# activate venv
 source ./venv/bin/activate
 
-python script.py $args
+python train_embedding_model.py $args
